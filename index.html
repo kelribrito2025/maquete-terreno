@@ -1072,20 +1072,15 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     gatePivot.position.set(gx, gh, zf - T - 0.02);
     gatePivot.userData = { x0: gx, travel: Math.min(gw, left - (-W / 2 + T) - 0.05) };
     // Portão convencional preto: quadro de metal com lambris horizontais
-    const gMat = FB ? mat.gateWood : mat.gateBlack;
+    const gMat = mat.gateBlack;            // portão preto nas duas fachadas
     box(gw - 0.02, gh - 0.02, 0.04, gMat, 0, -gh / 2, 0, gatePivot);
     const gn = Math.max(6, Math.round(gh / 0.16)), gph = (gh - 0.12) / gn;
     for (let i = 0; i < gn; i++) {
-      if (!FB) box(gw - 0.16, gph - 0.02, 0.05, mat.gateBlack, 0, -0.06 - gph * (i + 0.5), T / 2, gatePivot);
+      box(gw - 0.16, gph - 0.02, 0.05, mat.gateBlack, 0, -0.06 - gph * (i + 0.5), T / 2, gatePivot);
     }
-    if (FB) {                               // painéis de madeira com frisos acobreados
-      box(gw - 0.04, gh - 0.04, 0.05, mat.gateWood, 0, -gh / 2, T / 2, gatePivot);
-      for (let i = 1; i < 4; i++) box(0.03, gh - 0.04, 0.06, mat.copper, -gw / 2 + gw * i / 4, -gh / 2, T / 2, gatePivot);
-    } else {
-      box(0.07, gh - 0.02, 0.07, mat.gateBlack, -gw / 2 + 0.045, -gh / 2, T / 2, gatePivot);
-      box(0.07, gh - 0.02, 0.07, mat.gateBlack, gw / 2 - 0.045, -gh / 2, T / 2, gatePivot);
-      box(0.07, gh - 0.02, 0.07, mat.gateBlack, 0, -gh / 2, T / 2, gatePivot);
-    }
+    box(0.07, gh - 0.02, 0.07, mat.gateBlack, -gw / 2 + 0.045, -gh / 2, T / 2, gatePivot);
+    box(0.07, gh - 0.02, 0.07, mat.gateBlack, gw / 2 - 0.045, -gh / 2, T / 2, gatePivot);
+    box(0.07, gh - 0.02, 0.07, mat.gateBlack, 0, -gh / 2, T / 2, gatePivot);
     dyn.add(gatePivot);
     gatePivot.position.x = gx - gatePivot.userData.travel * gateT;
 
