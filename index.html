@@ -1297,7 +1297,13 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     fence(-W / 2 + T / 2, -FRONT, -W / 2 + T / 2, zl, wh);
     fence(W / 2 - T / 2, -FRONT, W / 2 - T / 2, zr, wh);
     if (state.divider) fence(-W / 2 + T / 2, -FRONT + T / 2, W / 2 - T / 2, -FRONT + T / 2, wh);
-    if (FB) fence(-W / 2 + 0.1, zOut + 0.05, (hasNiche ? split : left) - 0.1, zOut + 0.05, 3.72);
+    if (FB) {
+      // fachada 2: cerca no alto do volume de pedra e, continuando, por cima do pórtico até o muro direito
+      const sxB = (hasNiche ? split : left) - 0.1, pz = zOut + MD - 0.15, py = yU + 0.62;
+      fence(-W / 2 + 0.1, zOut + 0.05, sxB, zOut + 0.05, 3.72);
+      fence(sxB, zOut + 0.05, sxB, pz, py);
+      fence(sxB, pz, W / 2 - 0.1, pz, py);
+    }
     else fence(-W / 2 + 0.1, zf, W / 2 - 0.1, zf, yU + FT + bandH + 0.06);
     // casa atual (terreno de trás): cerca nos dois muros laterais e no muro da frente dela
     // os muros da casa atual têm a mesma altura do muro deste terreno
