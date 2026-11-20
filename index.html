@@ -325,15 +325,13 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   const dirtMat = std(0xb79c7b, 1);          // terreno baldio: terra batida, sem grama
   [-1, 1].forEach((s) => {
     const cx = s * (W / 2 + NB_W / 2), xOut = s * (W / 2 + NB_W - T / 2);
-    // Frente: os dois terrenos vizinhos estão vazios (baldios), só com muro de fora e de fundo
+    // Frente: os dois terrenos vizinhos estão vazios (baldios), sem muro
     box(NB_W, 0.06, D, dirtMat, cx, -0.02, 0).castShadow = false;
-    box(T, 2.5, D, mat.wall, xOut, 1.25, 0);
-    box(NB_W, 2.5, T, mat.wall, cx, 1.25, -FRONT + T / 2);
     if (s === 1) {
-      // Fundo, lado direito: também terreno baldio
+      // Fundo, lado direito: também terreno baldio, sem muro
       box(NB_W, 0.06, D, dirtMat, cx, -0.02, -FRONT - D / 2).castShadow = false;
-      box(T, 2.5, D, mat.wall, xOut, 1.25, -FRONT - D / 2);
     } else {
+      box(NB_W, 2.5, T, mat.wall, cx, 1.25, -FRONT - T / 2);   // muro de fundo da casa vizinha (é dela, não do baldio)
       // Fundo, lado esquerdo: casa vizinha da casa atual, de frente para a outra rua
       box(NB_W, 0.06, D, nbGrass, cx, -0.02, -FRONT - D / 2).castShadow = false;
       box(NB_W, NB_H, NB_D, nbMat, cx, NB_H / 2, -FRONT - D + NB_D / 2);
@@ -347,7 +345,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   const BZ = -FRONT - D / 2;                // centro do terreno de trás
   // Casa atual em L: bloco principal na largura toda + ala comprida no lado esquerdo; piscina no vão do L
   const HZ0 = -FRONT - D + 3;               // a casa começa a 3 m da outra rua
-  const HOUSE = { w: W - 2 * T, d: 14, h: 3.2, z: HZ0 + 7, legW: 5.5, legD: 13 };
+  const HOUSE = { w: W - 2 * T, d: 14, h: 3.2, z: HZ0 + 7, legW: 5.5, legD: 15 };
   const POOL = { w: 2.6, d: 4.6, x: W / 2 - T - 0.9 - 1.3, z: HZ0 + 14 + 1.3 + 2.3 };   // piscina pequena, junto ao muro direito
   box(36, 0.4, 46, mat.board, 0, -0.25, -FRONT - 26.5).castShadow = false;
   box(W, 0.06, D, mat.grass, 0, -0.02, BZ).castShadow = false;
@@ -380,19 +378,22 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   ns2(box(0.05, 2.1, 2.0, hBlack, PX + 0.03, 1.05, MZ + 7.6));
   ns2(box(0.05, 1.95, 1.75, hWhite, PX + 0.05, 1.03, MZ + 7.6));
   ns2(box(0.05, 1.0, 1.0, hBlack, PX + 0.03, 1.5, MZ + 4.8));
-  box(HOUSE.legW, HOUSE.h, 1.5, hMat, (XL + WX1) / 2, HOUSE.h / 2, ZB + 0.75);
-  ns2(box(0.05, 2.1, 0.9, hBlack, WX1 + 0.03, 1.05, ZB + 0.75));               // porta veneziana preta
-  const nD = ZE - ZB - 1.5, nZ = (ZB + 1.5 + ZE) / 2, LX0 = XL + 2.2;
-  box(2.2, 4.2, nD, hYellow, XL + 1.1, 2.1, nZ);                                // volume alto amarelo
-  box(WX1 - LX0, 0.14, nD, hMat, (LX0 + WX1) / 2, HOUSE.h - 0.07, nZ);
-  box(0.18, HOUSE.h, nD, hMat, WX1 - 0.09, HOUSE.h / 2, nZ);
-  ns2(box(WX1 - LX0, 0.06, nD, hWhite, (LX0 + WX1) / 2, 0.03, nZ));
-  box(WX1 - LX0 - 0.4, 0.85, 0.55, hWhite, (LX0 + WX1) / 2, 0.425, ZB + 1.8);   // bancada da lavanderia
-  ns2(box(WX1 - LX0 - 0.4, 0.04, 0.6, hBlack, (LX0 + WX1) / 2, 0.87, ZB + 1.82));
-  box(0.6, 0.85, 0.6, hWhite, LX0 + 0.7, 0.425, ZB + 2.45);                     // máquina de lavar
-  ns2(box(0.4, 0.4, 0.02, hBlack, LX0 + 0.7, 0.5, ZB + 2.76));
-  box(0.1, 4.0, -FRONT - ZE, hYellow, XL + 0.05, 2.0, (ZE - FRONT) / 2);        // muro alto amarelo do vizinho, até a divisa
-  for (let z = ZB + 0.2; z < ZE + 0.6; z += 0.55) leaves(WX1 + 0.45, 0.02, z, 6, 0.85, 0.12, scene);   // espadas-de-são-jorge
+  // Fim da ala: trecho fechado com porta veneziana e janelinha, depois a lavanderia aberta
+  // para o lado do pergolado, e por último o volume alto amarelo
+  const Z1 = ZB + 2.2, Z2 = ZE - 1.2, nL = Z2 - Z1, nZ = (Z1 + Z2) / 2, LXb = WX1 - 2.5;
+  box(HOUSE.legW, HOUSE.h, Z1 - ZB, hMat, (XL + WX1) / 2, HOUSE.h / 2, (ZB + Z1) / 2);
+  ns2(box(0.05, 2.1, 0.9, hBlack, WX1 + 0.03, 1.05, ZB + 0.6));                // porta veneziana preta
+  ns2(box(0.05, 0.5, 0.7, hBlack, WX1 + 0.03, 2.0, ZB + 1.7));                 // janelinha alta
+  box(LXb - XL, HOUSE.h, nL, hMat, (XL + LXb) / 2, HOUSE.h / 2, nZ);           // parede do fundo da lavanderia
+  box(WX1 - LXb, 0.14, nL, hMat, (LXb + WX1) / 2, HOUSE.h - 0.07, nZ);         // laje
+  ns2(box(WX1 - LXb, 0.06, nL, hWhite, (LXb + WX1) / 2, 0.03, nZ));            // piso
+  box(0.55, 0.85, nL - 0.3, hWhite, LXb + 0.3, 0.425, nZ);                     // bancada, de frente para o pergolado
+  ns2(box(0.6, 0.04, nL - 0.3, hBlack, LXb + 0.32, 0.87, nZ));
+  box(0.6, 0.85, 0.6, hWhite, LXb + 0.95, 0.425, Z2 - 0.4);                    // máquina de lavar
+  ns2(box(0.02, 0.4, 0.4, hBlack, LXb + 1.26, 0.5, Z2 - 0.4));
+  box(HOUSE.legW, 4.2, ZE - Z2, hYellow, (XL + WX1) / 2, 2.1, (Z2 + ZE) / 2);  // volume alto amarelo, na ponta
+  box(0.1, 4.0, -FRONT - ZE, hYellow, XL + 0.05, 2.0, (ZE - FRONT) / 2);       // muro alto amarelo do vizinho, até a divisa
+  for (let z = ZB + 1.1; z < Z1 - 0.1; z += 0.5) leaves(WX1 + 0.45, 0.02, z, 6, 0.85, 0.12, scene);   // espadas-de-são-jorge
 
   // Deck de porcelanato, piscina com borda de pastilha azul, espreguiçadeiras e guarda-sol fechado
   const DX0 = WX1 + 1.2, DZ1 = MZ + 10;
@@ -413,17 +414,17 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   });
 
   // Ducha no muro direito: painel de pedra, chuveiro e treliças de madeira com vasos
-  const SZ = DZ1 + 1.7;
+  const SZ = DZ1 + 0.9;
   ns2(box(0.06, 2.3, 1.3, hStone, XR - 0.03, 1.15, SZ));
   ns2(box(1.0, 0.06, 1.3, hDeck, XR - 0.55, 0.03, SZ));
   ns2(box(0.35, 0.04, 0.22, hBlack, XR - 0.22, 2.2, SZ));
-  [[-1.05, 1.9], [-1.25, 1.1], [-1.0, 0.45], [1.1, 1.9], [1.3, 1.1], [1.0, 0.45]].forEach(([dz, y]) => {
+  [[-0.95, 1.9], [-1.05, 1.1], [-0.95, 0.45], [0.95, 1.9], [1.05, 1.1], [0.95, 0.45]].forEach(([dz, y]) => {
     ns2(box(0.05, 0.55, 0.55, hWood, XR - 0.03, y, SZ + dz));
     ns2(box(0.16, 0.14, 0.3, hBlack, XR - 0.12, y - 0.05, SZ + dz));
   });
 
   // Pergolado rústico encostado no muro direito, com dois ninhos de fibra e varal de luzes
-  const PERG = { x: XR - 2.1, z: DZ1 + 5.6, s: 4 };
+  const PERG = { x: XR - 2.1, z: nZ + 0.6, s: 4 };   // de frente para a lavanderia
   (function () {
     const g = new THREE.Group(); g.position.set(PERG.x, 0, PERG.z); scene.add(g);
     const s = PERG.s, fxp = -s / 2 + 0.12;                                      // lado aberto (para o gramado)
@@ -445,9 +446,9 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     leaves(-s / 2 + 0.5, 0.3, s / 2 - 0.4, 7, 0.4, 0.4, g);
   })();
 
-  // Passadeiras no gramado: em diagonal até o deck, e em linha até a lavanderia
-  [[-0.4, ZE + 3.4], [0.6, ZE + 1.8], [1.6, ZE + 0.2], [2.6, ZE - 1.4]].forEach(([x, z]) => ns2(box(1.3, 0.06, 1.3, hDeck, x, 0.03, z)));
-  [ZE + 0.9, ZE + 2.5].forEach((z) => ns2(box(1.2, 0.06, 1.2, hDeck, (LX0 + WX1) / 2, 0.03, z)));
+  // Passadeiras no gramado: da lavanderia ao pergolado, e do pergolado ao deck
+  [WX1 + 0.75, WX1 + 1.75].forEach((x) => ns2(box(0.85, 0.06, 1.3, hDeck, x, 0.03, nZ)));
+  ns2(box(1.3, 0.06, 0.9, hDeck, WX1 + 1.9, 0.03, DZ1 + 0.75));
 
   // Junto ao muro de divisa: três palmeiras baixas, dois arbustos e uma arvoreta, como nas fotos
   const palmTrunk = std(0x9a8f80, 0.9), palmLeaf = std(0x3f8a3f, 0.8), DVZ = -FRONT - 0.9;
