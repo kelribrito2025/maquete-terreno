@@ -477,7 +477,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   function disposeGroup(g) {
     g.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
-      if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose(); }
+      if (o.material && o.material.map && o.material !== paverMat) { o.material.map.dispose(); o.material.dispose(); }
     });
     scene.remove(g);
   }
@@ -559,6 +559,24 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     return g;
   }
 
+  // Piso intertravado: textura de tijolinhos de concreto 20 x 10 cm, em amarração
+  const paverTex = (function () {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const x = c.getContext('2d');
+    x.fillStyle = '#6f6c68'; x.fillRect(0, 0, 256, 256);
+    const tones = ['#a9a6a0', '#b3afa8', '#9d9a94', '#a39f99', '#b8b4ad'];
+    const bw = 64, bh = 32;
+    for (let r = 0; r < 8; r++) for (let q = -1; q < 4; q++) {
+      x.fillStyle = tones[(r * 3 + q * 7 + 21) % tones.length];
+      x.fillRect(q * bw + (r % 2 ? bw / 2 : 0) + 2, r * bh + 2, bw - 4, bh - 4);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+    return t;
+  })();
+  const paverMat = new THREE.MeshStandardMaterial({ map: paverTex, roughness: 0.95 });
+  const soilMat = std(0x4a3a2c, 1);
+
   // Materiais da área gourmet
   const gmMat = {
     brick: std(0x8a4b32, 0.9), black: std(0x141516, 0.6), cabinet: std(0x3a3f44, 0.7), stone: std(0xece9e3, 0.4),
@@ -622,14 +640,14 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     box(T, NB_H, rc, mat.wall, -W / 2 + T / 2, NB_H / 2, FRONT - rc / 2, dyn);
     box(T, NB_H, rc, mat.wall, W / 2 - T / 2, NB_H / 2, FRONT - rc / 2, dyn);
 
-    // Recuo gramado, com faixa de placas de concreto até o portão
+    // Recuo todo em piso intertravado (tijolinho de concreto), sem grama
     const MD = 1.6;                         // profundidade da marquise
-    box(W - 2 * T, 0.07, rc, mat.grass, 0, 0.03, FRONT - rc / 2, dyn).castShadow = false;
+    paverTex.repeat.set((W - 2 * T) / 0.8, rc / 0.8);
+    box(W - 2 * T, 0.07, rc, paverMat, 0, 0.03, FRONT - rc / 2, dyn).castShadow = false;
     const dw = Math.min(W - 2 * T - 0.2, gw + 0.8);
     const dxc = Math.max(-W / 2 + T + dw / 2 + 0.1, Math.min(W / 2 - T - dw / 2 - 0.1, gx));
     const runLen = rc - MD;
     const ns = Math.max(2, Math.round(runLen / 1.5)), sl = runLen / ns;
-    for (let i = 0; i < ns; i++) box(dw, 0.08, sl - 0.16, mat.slab, dxc, 0.05, FRONT - sl * (i + 0.5), dyn).castShadow = false;
 
     // Guia rebaixada: rampa da rua para a calçada, alinhada ao portão
     const ramp = box(Math.min(W, gw + 1), 0.05, 0.8, mat.ramp, gx, 0.035, FRONT + 2.5 + 0.36, dyn);
@@ -731,14 +749,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
 
       // Capim sob o banco e arbustos no gramado do recuo
       for (let x = niche[0] + 0.3; x < niche[1] - 0.2; x += 0.55) leaves(x, 0.06, zOut + 1.2, 5, 0.45, 0.5, dyn);
-      [[-0.9, 2.7, 0.45], [0.2, 3.2, 0.33], [-1.5, 3.7, 0.3]].forEach(([ox, oz, r]) => {
-        const sx = nc + (nicheLeft ? ox : -ox), sz = zOut + oz;
-        if (sz > FRONT - 0.5 || Math.abs(sx - dxc) < dw / 2 + r + 0.2) return;
-        const b = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), mat.shrub);
-        b.position.set(sx, 0.06 + r * 0.8, sz); b.castShadow = true; dyn.add(b);
-      });
-      const ex = nicheLeft ? dxc - dw / 2 - 0.2 : dxc + dw / 2 + 0.2;
-      for (let z = zOut + MD + 0.4; z < FRONT - 0.3; z += 1.1) leaves(ex, 0.06, z, 5, 0.4, 0.55, dyn);
+      box(nw - 0.3, 0.1, 0.5, soilMat, nc, 0.05, zOut + 1.2, dyn).castShadow = false;   // canteiro sob o banco
     }
 
     // Portão de madeira em réguas verticais, no mesmo plano do revestimento
