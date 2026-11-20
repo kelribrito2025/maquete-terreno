@@ -393,6 +393,29 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   box(0.6, 0.85, 0.6, hWhite, LXb + 0.95, 0.425, Z2 - 0.4);                    // máquina de lavar
   ns2(box(0.02, 0.4, 0.4, hBlack, LXb + 1.26, 0.5, Z2 - 0.4));
   box(HOUSE.legW, HOUSE.h, ZE - Z2, hMat, (XL + WX1) / 2, HOUSE.h / 2, (Z2 + ZE) / 2);  // parede branca que fecha a ponta da ala
+  // Nessa parede: cobogó no meio e escada encostada levando ao alçapão do forro
+  (function () {
+    const cx = (XL + WX1) / 2, fz = ZE + 0.005, cw = 1.6, chh = 1.6, cy = 1.55, n = 4, c = cw / n;
+    ns2(box(cw, chh, 0.02, hBlack, cx, cy, fz));                                   // vão escuro atrás
+    for (let i = 0; i <= n; i++) {
+      ns2(box(cw + 0.06, 0.05, 0.1, hWhite, cx, cy - chh / 2 + i * c, fz + 0.04));   // travessas
+      ns2(box(0.05, chh + 0.06, 0.1, hWhite, cx - cw / 2 + i * c, cy, fz + 0.04));   // montantes
+    }
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {                       // peça vazada de cada bloco
+      const r = new THREE.Mesh(new THREE.TorusGeometry(c * 0.3, 0.03, 6, 20), hWhite);
+      r.position.set(cx - cw / 2 + (i + 0.5) * c, cy - chh / 2 + (j + 0.5) * c, fz + 0.05); scene.add(r);
+    }
+    // alçapão do forro no alto da parede e escada de alumínio encostada
+    const lx = XL + 0.95, alu = std(0xc3c8cc, 0.35, 0.7);
+    ns2(box(0.7, 0.6, 0.03, hBlack, lx, HOUSE.h - 0.45, fz + 0.01));
+    ns2(box(0.78, 0.05, 0.05, hWhite, lx, HOUSE.h - 0.12, fz + 0.03));
+    ns2(box(0.78, 0.05, 0.05, hWhite, lx, HOUSE.h - 0.78, fz + 0.03));
+    const lad = new THREE.Group(); lad.position.set(lx, 0, fz + 1.0); scene.add(lad);
+    const L = 3.15, tilt = Math.atan2(0.95, 3.0);
+    lad.rotation.x = -tilt;                                                         // topo encosta na parede
+    [-0.22, 0.22].forEach((x) => box(0.05, L, 0.07, alu, x, L / 2, 0, lad));
+    for (let y = 0.3; y < L - 0.1; y += 0.3) box(0.44, 0.03, 0.06, alu, 0, y, 0, lad);
+  })();
   for (let z = ZB + 1.1; z < Z1 - 0.1; z += 0.5) leaves(WX1 + 0.45, 0.02, z, 6, 0.85, 0.12, scene);   // espadas-de-são-jorge
 
   // Deck de porcelanato, piscina com borda de pastilha azul, espreguiçadeiras e guarda-sol fechado
