@@ -154,6 +154,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     <button id="toggle-car" type="button" aria-pressed="true">Carro</button>
     <button id="toggle-dims" type="button" aria-pressed="true">Cotas</button>
   </div>
+  <button id="toggle-div" class="wide" type="button" aria-pressed="false" style="margin-top:-8px">Remover muro do fundo</button>
 
   <div class="sliders sun">
     <div class="slider">
@@ -221,7 +222,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   const W = 12, D = 40, T = 0.15;           // frente, fundo, espessura do muro (m)
   const FRONT = D / 2;                      // z da testada (rua fica em +z)
   const CAR_L = 4.4, CAR_W = 1.8;           // carro médio
-  const state = { rc: 5.5, gl: 7, gw: 4, gh: 2.6, wh: 3.2, gx: 0, open: false, dims: true, car: true };
+  const state = { rc: 5.5, gl: 7, gw: 4, gh: 2.6, wh: 3.2, gx: 0, open: false, dims: true, car: true, divider: true };
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fmt = (n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -450,9 +451,10 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   ns2(box(1.3, 0.06, 0.9, hDeck, WX1 + 1.9, 0.03, DZ1 + 0.75));
 
   // Junto ao muro de divisa: três palmeiras baixas, dois arbustos e uma arvoreta, como nas fotos
+  const divGroup = new THREE.Group(); scene.add(divGroup);   // itens que saem junto com o muro divisório
   const palmTrunk = std(0x9a8f80, 0.9), palmLeaf = std(0x3f8a3f, 0.8), DVZ = -FRONT - 0.9;
   [4.3, -0.4, -4.6].forEach((px, n) => {
-    const g = new THREE.Group(); g.position.set(px, 0, DVZ); scene.add(g);
+    const g = new THREE.Group(); g.position.set(px, 0, DVZ); (Math.abs(px) < 1 ? divGroup : scene).add(g);   // as dos cantos ficam
     const hT = 1.25 + (n % 2) * 0.25;
     const t = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.13, hT, 10), palmTrunk); t.position.y = hT / 2; t.castShadow = true; g.add(t);
     for (let i = 0; i < 11; i++) {
@@ -463,13 +465,13 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     }
   });
   [[1.8, 0.5], [-2.0, 0.42]].forEach(([x, r]) => {
-    const sh = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), hShrub); sh.position.set(x, r * 0.85, DVZ); sh.castShadow = true; scene.add(sh);
+    const sh = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), hShrub); sh.position.set(x, r * 0.85, DVZ); sh.castShadow = true; divGroup.add(sh);
   });
-  box(0.05, 1.0, 0.05, palmTrunk, -3.3, 0.5, DVZ);
-  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), hShrub); crown.position.set(-3.3, 1.3, DVZ); crown.castShadow = true; scene.add(crown);
+  box(0.05, 1.0, 0.05, palmTrunk, -3.3, 0.5, DVZ, divGroup);
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), hShrub); crown.position.set(-3.3, 1.3, DVZ); crown.castShadow = true; divGroup.add(crown);
 
   // Arandelas pretas pequenas nos muros do quintal da casa atual
-  [-3, 0.2, 3].forEach((x) => ns2(box(0.14, 0.12, 0.06, hBlack, x, 1.95, -FRONT - T - 0.03)));
+  [-3, 0.2, 3].forEach((x) => ns2(box(0.14, 0.12, 0.06, hBlack, x, 1.95, -FRONT - T - 0.03, divGroup)));
   for (let z = MZ + 2; z < -FRONT - 1; z += 4) ns2(box(0.06, 0.12, 0.14, hBlack, XR - 0.03, 1.95, z));
 
   // Mini academia no meio do quintal, encostada no muro esquerdo: 4,5 m de largura (saindo do muro) por 9 m de comprimento (ao longo do muro).
@@ -586,15 +588,91 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     }
   })();
 
-  // Pessoa de 1,75 m na calçada, para dar escala
-  const person = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 1.45, 16), mat.person);
-  body.position.y = 0.8; body.castShadow = true;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), mat.person);
-  head.position.y = 1.62; head.castShadow = true;
-  person.add(body, head);
-  person.position.set(-7.4, 0.07, FRONT + 1.2);
-  scene.add(person);
+  // Pessoas: corpo com membros arredondados e articulados (quadril, joelho, ombro, cotovelo)
+  function makePerson(o) {
+    const g = new THREE.Group();
+    const M = (c, r) => std(c, r == null ? 0.8 : r);
+    const skin = M(o.skin, 0.7), top = M(o.shirt), bottom = M(o.pants, 0.85), shoe = M(o.shoe, 0.6), hair = M(o.hair, 0.9);
+    const part = (geo, m, x, y, z, parent, sx, sy, sz) => {
+      const p = new THREE.Mesh(geo, m); p.position.set(x, y, z);
+      if (sx) p.scale.set(sx, sy, sz);
+      p.castShadow = true; (parent || g).add(p); return p;
+    };
+    const cyl = (rt, rb, h) => new THREE.CylinderGeometry(rt, rb, h, 14);
+    const sph = (r) => new THREE.SphereGeometry(r, 16, 12);
+    const H = o.h || 1.75, k = H / 1.75;
+    g.scale.setScalar(k);
+    // pernas: pivô no quadril, com coxa, joelho, canela e tênis
+    const leg = (sd) => {
+      const hip = new THREE.Group(); hip.position.set(sd * 0.095, 0.92, 0); g.add(hip);
+      part(cyl(0.078, 0.062, 0.44), bottom, 0, -0.22, 0, hip);
+      const knee = new THREE.Group(); knee.position.set(0, -0.44, 0); hip.add(knee);
+      part(sph(0.062), bottom, 0, 0, 0, knee);
+      part(cyl(o.shorts ? 0.05 : 0.06, 0.045, 0.42), o.shorts ? skin : bottom, 0, -0.21, 0, knee);
+      part(sph(1), shoe, 0, -0.44, -0.045, knee, 0.06, 0.045, 0.13);
+      return hip;
+    };
+    const legL = leg(-1), legR = leg(1);
+    // quadril e tronco (mais largo nos ombros), pescoço e cabeça
+    part(cyl(0.16, 0.15, 0.16), bottom, 0, 0.96, 0, g, 1, 1, 0.7);
+    if (o.dress) part(cyl(0.16, 0.25, 0.42), top, 0, 0.78, 0, g, 1, 1, 0.75);
+    part(cyl(o.female ? 0.17 : 0.2, 0.15, 0.5), top, 0, 1.28, 0, g, 1, 1, 0.62);
+    part(sph(0.2), top, 0, 1.5, 0, g, o.female ? 0.85 : 1, 0.35, 0.62);
+    part(cyl(0.045, 0.05, 0.1), skin, 0, 1.58, 0, g);
+    const head = part(sph(0.105), skin, 0, 1.7, 0, g, 0.92, 1.12, 1);
+    part(sph(0.02), skin, 0, 1.69, -0.1, g);                                  // nariz (frente = -z)
+    part(sph(0.108), hair, 0, 1.73, 0.012, g, 0.95, 0.95, 1.02).geometry = new THREE.SphereGeometry(0.108, 16, 10, 0, Math.PI * 2, 0, Math.PI / 1.9);
+    if (o.longHair) part(sph(1), hair, 0, 1.56, 0.07, g, 0.11, 0.2, 0.06);
+    // braços: pivô no ombro, manga, cotovelo, antebraço e mão
+    const arm = (sd) => {
+      const sh = new THREE.Group(); sh.position.set(sd * (o.female ? 0.19 : 0.215), 1.47, 0); g.add(sh);
+      sh.rotation.z = sd * 0.06;
+      part(cyl(0.048, 0.042, 0.29), o.longSleeve ? top : skin, 0, -0.145, 0, sh);
+      part(cyl(0.056, 0.052, 0.14), top, 0, -0.06, 0, sh);
+      const el = new THREE.Group(); el.position.set(0, -0.29, 0); sh.add(el);
+      part(cyl(0.04, 0.034, 0.26), o.longSleeve ? top : skin, 0, -0.13, 0, el);
+      part(sph(1), skin, 0, -0.3, 0, el, 0.038, 0.06, 0.028);
+      return sh;
+    };
+    const armL = arm(-1), armR = arm(1);
+    return { group: g, legL, legR, armL, armR, head };
+  }
+
+  // Duas pessoas conversando na calçada, para dar escala
+  const p1 = makePerson({ skin: 0xc68a5e, shirt: 0xf2f2ee, pants: 0x2b3a52, shoe: 0x1c1c1c, hair: 0x1e1712, h: 1.78 });
+  p1.group.position.set(-4.4, 0.07, FRONT + 1.1); p1.group.rotation.y = -Math.PI / 2 - 0.35; scene.add(p1.group);
+  p1.armR.rotation.x = -0.25; p1.armR.children[2].rotation.x = -0.9;    // gesticulando
+  const p2 = makePerson({ skin: 0xe3b896, shirt: 0xb5473a, pants: 0x1f2328, shoe: 0xf2f2f2, hair: 0x5a3a22, h: 1.65, female: true, longHair: true, dress: true });
+  p2.group.position.set(-3.6, 0.07, FRONT + 1.3); p2.group.rotation.y = Math.PI / 2 + 0.25; scene.add(p2.group);
+  p2.legL.rotation.x = 0.08; p2.legR.rotation.x = -0.08;
+
+  // Poste de energia na calçada, com cruzeta, isoladores, fios ao longo da rua e ramal de entrada
+  const poleMat = std(0xa6a39d, 0.85), wireMat = new THREE.LineBasicMaterial({ color: 0x1c1d1f });
+  const POLE = { x: 0, z: FRONT + 2.25 };
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.17, 9, 12), poleMat);
+  pole.position.set(POLE.x, 4.5, POLE.z); pole.castShadow = true; scene.add(pole);
+  box(0.12, 0.12, 2.0, poleMat, POLE.x, 8.4, POLE.z);
+  box(0.1, 0.1, 1.2, poleMat, POLE.x, 6.6, POLE.z);
+  const tops = [[8.62, -0.85], [8.62, 0], [8.62, 0.85], [6.82, -0.45], [6.82, 0.45]];
+  tops.forEach(([y, dz]) => {
+    const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.16, 10), std(0xdfe4e6, 0.3)); ins.position.set(POLE.x, y - 0.06, POLE.z + dz); scene.add(ins);
+  });
+  const transf = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.9, 16), std(0x8b9196, 0.5, 0.4));
+  transf.position.set(POLE.x, 5.6, POLE.z - 0.38); transf.castShadow = true; scene.add(transf);
+  const sagLine = (a, b, sag) => {
+    const pts = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24, p = new THREE.Vector3().lerpVectors(a, b, t);
+      p.y -= sag * 4 * t * (1 - t); pts.push(p);
+    }
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat));
+  };
+  tops.forEach(([y, dz]) => {
+    const yy = y + 0.04;
+    sagLine(new THREE.Vector3(-18, yy, POLE.z + dz), new THREE.Vector3(POLE.x, yy, POLE.z + dz), 0.45);
+    sagLine(new THREE.Vector3(POLE.x, yy, POLE.z + dz), new THREE.Vector3(18, yy, POLE.z + dz), 0.45);
+  });
+  [-0.12, 0.12].forEach((dy) => sagLine(new THREE.Vector3(-18, 5.4 + dy, POLE.z + 0.15), new THREE.Vector3(18, 5.4 + dy, POLE.z + 0.15), 0.35));   // telefone/internet
 
   // Partes que mudam com os ajustes
   let dyn = new THREE.Group(); scene.add(dyn);
@@ -763,7 +841,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     const Lb = D - rc;
     box(T, wh, Lb, mat.wall, -W / 2 + T / 2, wh / 2, -FRONT + Lb / 2, dyn);
     box(T, wh, Lb, mat.wall, W / 2 - T / 2, wh / 2, -FRONT + Lb / 2, dyn);
-    box(W - 2 * T, wh, T, mat.wall, 0, wh / 2, -FRONT + T / 2, dyn);
+    if (state.divider) box(W - 2 * T, wh, T, mat.wall, 0, wh / 2, -FRONT + T / 2, dyn);   // muro divisório
     // No recuo, os vizinhos são terrenos vazios: a divisa é o próprio muro, na mesma altura
     box(T, wh, rc, mat.wall, -W / 2 + T / 2, wh / 2, FRONT - rc / 2, dyn);
     box(T, wh, rc, mat.wall, W / 2 - T / 2, wh / 2, FRONT - rc / 2, dyn);
@@ -1109,7 +1187,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     const zl = gRear, zr = gRear;            // garagem e área gourmet são cobertas: a cerca vai até o fim delas
     fence(-W / 2 + T / 2, -FRONT, -W / 2 + T / 2, zl, wh);
     fence(W / 2 - T / 2, -FRONT, W / 2 - T / 2, zr, wh);
-    fence(-W / 2 + T / 2, -FRONT + T / 2, W / 2 - T / 2, -FRONT + T / 2, wh);
+    if (state.divider) fence(-W / 2 + T / 2, -FRONT + T / 2, W / 2 - T / 2, -FRONT + T / 2, wh);
     fence(-W / 2 + 0.1, zf, W / 2 - 0.1, zf, yU + FT + bandH + 0.06);
     // casa atual (terreno de trás): cerca nos dois muros laterais e no muro da frente dela
     // os muros da casa atual têm a mesma altura do muro deste terreno
@@ -1215,19 +1293,9 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   // Passeio a pé: um boneco anda pelo terreno e a câmera segue por trás dele
   const wk = { x: 2, z: FRONT + 1.3, phase: 0 };
   const walker = new THREE.Group(); walker.visible = false; scene.add(walker);
-  const skin = std(0xd9a37a, 0.8), shirt = std(0x2f6f8f, 0.8), pants = std(0x23272b, 0.85), shoe = std(0xf2f2f2, 0.7);
-  const limb = (x, y, w, h, d, m, foot) => {
-    const pv = new THREE.Group(); pv.position.set(x, y, 0);
-    box(w, h, d, m, 0, -h / 2, 0, pv);
-    if (foot) box(w + 0.01, 0.07, d + 0.1, shoe, 0, -h + 0.035, -0.05, pv);
-    walker.add(pv); return pv;
-  };
-  const legL = limb(-0.1, 0.9, 0.15, 0.9, 0.17, pants, true), legR = limb(0.1, 0.9, 0.15, 0.9, 0.17, pants, true);
-  box(0.44, 0.62, 0.25, shirt, 0, 1.2, 0, walker);
-  const armL = limb(-0.28, 1.47, 0.1, 0.62, 0.12, skin), armR = limb(0.28, 1.47, 0.1, 0.62, 0.12, skin);
-  box(0.11, 0.2, 0.13, shirt, -0.28, 1.4, 0, walker); box(0.11, 0.2, 0.13, shirt, 0.28, 1.4, 0, walker);
-  const headM = new THREE.Mesh(new THREE.SphereGeometry(0.13, 18, 14), skin); headM.position.y = 1.67; headM.castShadow = true; walker.add(headM);
-  const hairM = new THREE.Mesh(new THREE.SphereGeometry(0.135, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), pants); hairM.position.y = 1.69; walker.add(hairM);
+  const wp = makePerson({ skin: 0xd09a70, shirt: 0x2f6f8f, pants: 0x3b4a5c, shoe: 0xf2f2f2, hair: 0x2a1d14, h: 1.76 });
+  walker.add(wp.group);
+  const legL = wp.legL, legR = wp.legR, armL = wp.armL, armR = wp.armR;
   const camRay = new THREE.Raycaster(), camHead = new THREE.Vector3(), camWant = new THREE.Vector3(), camDir = new THREE.Vector3();
   const walkBtn = document.getElementById('toggle-walk');
   const FREE_HINT = 'W A S D ou setas para andar. Arraste para olhar. Q desce, E sobe. Shift corre.';
@@ -1338,6 +1406,14 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     state.car = !state.car;
     carBtn.setAttribute('aria-pressed', String(state.car));
     if (carGroup) carGroup.visible = state.car;
+  });
+  const divBtn = document.getElementById('toggle-div');
+  divBtn.addEventListener('click', () => {
+    state.divider = !state.divider;
+    divGroup.visible = state.divider;
+    divBtn.setAttribute('aria-pressed', String(!state.divider));
+    divBtn.textContent = state.divider ? 'Remover muro do fundo' : 'Colocar muro do fundo';
+    build();
   });
   const dimsBtn = document.getElementById('toggle-dims');
   dimsBtn.addEventListener('click', () => {
