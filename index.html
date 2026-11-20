@@ -345,7 +345,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   const BZ = -FRONT - D / 2;                // centro do terreno de trás
   // Casa atual em L: bloco principal na largura toda + ala comprida no lado esquerdo; piscina no vão do L
   const HZ0 = -FRONT - D + 3;               // a casa começa a 3 m da outra rua
-  const HOUSE = { w: W - 2 * T, d: 14, h: 3.2, z: HZ0 + 7, legW: 5.5, legD: 15 };
+  const HOUSE = { w: W - 2 * T, d: 14, h: 3.2, z: HZ0 + 7, legW: 5.5, legD: 15.9 };
   const POOL = { w: 2.6, d: 4.6, x: W / 2 - T - 0.9 - 1.3, z: HZ0 + 14 + 1.3 + 2.3 };   // piscina pequena, junto ao muro direito
   box(36, 0.4, 46, mat.board, 0, -0.25, -FRONT - 26.5).castShadow = false;
   box(W, 0.06, D, mat.grass, 0, -0.02, BZ).castShadow = false;
@@ -379,8 +379,8 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   ns2(box(0.05, 1.95, 1.75, hWhite, PX + 0.05, 1.03, MZ + 7.6));
   ns2(box(0.05, 1.0, 1.0, hBlack, PX + 0.03, 1.5, MZ + 4.8));
   // Fim da ala: trecho fechado com porta veneziana e janelinha, depois a lavanderia aberta
-  // para o lado do pergolado, e por último o volume alto amarelo
-  const Z1 = ZB + 2.2, Z2 = ZE - 1.2, nL = Z2 - Z1, nZ = (Z1 + Z2) / 2, LXb = WX1 - 2.5;
+  // para o lado do pergolado, com a mesma largura dele (4 m)
+  const Z1 = ZB + 2.2, Z2 = ZE - 0.2, nL = Z2 - Z1, nZ = (Z1 + Z2) / 2, LXb = WX1 - 2.5;
   box(HOUSE.legW, HOUSE.h, Z1 - ZB, hMat, (XL + WX1) / 2, HOUSE.h / 2, (ZB + Z1) / 2);
   ns2(box(0.05, 2.1, 0.9, hBlack, WX1 + 0.03, 1.05, ZB + 0.6));                // porta veneziana preta
   ns2(box(0.05, 0.5, 0.7, hBlack, WX1 + 0.03, 2.0, ZB + 1.7));                 // janelinha alta
@@ -391,8 +391,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   ns2(box(0.6, 0.04, nL - 0.3, hBlack, LXb + 0.32, 0.87, nZ));
   box(0.6, 0.85, 0.6, hWhite, LXb + 0.95, 0.425, Z2 - 0.4);                    // máquina de lavar
   ns2(box(0.02, 0.4, 0.4, hBlack, LXb + 1.26, 0.5, Z2 - 0.4));
-  box(HOUSE.legW, 4.2, ZE - Z2, hYellow, (XL + WX1) / 2, 2.1, (Z2 + ZE) / 2);  // volume alto amarelo, na ponta
-  box(0.1, 4.0, -FRONT - ZE, hYellow, XL + 0.05, 2.0, (ZE - FRONT) / 2);       // muro alto amarelo do vizinho, até a divisa
+  box(HOUSE.legW, HOUSE.h, ZE - Z2, hMat, (XL + WX1) / 2, HOUSE.h / 2, (Z2 + ZE) / 2);  // parede branca que fecha a ponta da ala
   for (let z = ZB + 1.1; z < Z1 - 0.1; z += 0.5) leaves(WX1 + 0.45, 0.02, z, 6, 0.85, 0.12, scene);   // espadas-de-são-jorge
 
   // Deck de porcelanato, piscina com borda de pastilha azul, espreguiçadeiras e guarda-sol fechado
@@ -424,7 +423,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   });
 
   // Pergolado rústico encostado no muro direito, com dois ninhos de fibra e varal de luzes
-  const PERG = { x: XR - 2.1, z: nZ + 0.6, s: 4 };   // de frente para a lavanderia
+  const PERG = { x: XR - 2.1, z: nZ, s: 4 };   // de frente para a lavanderia, que tem a mesma largura (4 m)
   (function () {
     const g = new THREE.Group(); g.position.set(PERG.x, 0, PERG.z); scene.add(g);
     const s = PERG.s, fxp = -s / 2 + 0.12;                                      // lado aberto (para o gramado)
