@@ -1056,14 +1056,10 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
       const numM = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(nc2), transparent: true });
       const num = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.42), numM);
       num.position.set(fx0 + 0.55, yU + BH / 2, zOut + MD + 0.01); dyn.add(num);
-      // jardim com arbustos e escada de pedra escura na frente do volume de pedra
+      // jardim com arbustos na frente do volume de pedra
       const gx0 = xL + 0.05, gx1 = xL + sw - 0.4;
       box(gx1 - gx0, 0.08, 2.2, mat.grass, (gx0 + gx1) / 2, 0.045, zOut + 0.25 + 1.1, dyn).castShadow = false;
       const sx = xL + sw - 1.25;
-      for (let i = 0; i < 4; i++) {
-        const hh = 0.6 - i * 0.15;
-        box(1.5, hh, 0.45, mat.darkStone, sx, hh / 2, zOut + 0.25 + 0.45 * (i + 0.5), dyn);
-      }
       [[xL + 0.55, 1.9, 0.32], [xL + 1.5, 1.1, 0.27], [xL + 2.1, 2.2, 0.3], [sx + 1.0, 1.6, 0.25]].forEach(([bx, bz, r]) => {
         const b = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), mat.shrubGreen);
         b.position.set(bx, 0.08 + r * 0.8, zOut + 0.25 + bz); b.castShadow = true; dyn.add(b);
