@@ -562,9 +562,10 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     fan.rotation.z = Math.PI / 2; fan.position.set(-w / 2 + 0.685, h + 0.76, 0); g.add(fan);
 
     // caminho de placas: do muro do fundo, passando pela porta da academia, até a área gourmet
-    const px = w / 2 + 0.9, buxoGeo = new THREE.SphereGeometry(0.22, 14, 10), buxoMat = std(0x3f7d3a, 0.9);
+    const px = -GYM.x, buxoGeo = new THREE.SphereGeometry(0.22, 14, 10), buxoMat = std(0x3f7d3a, 0.9);
     // placa de ligação entre a porta da academia e o caminho
-    noSh(box(0.5, 0.06, 1.8, mat.slab, w / 2 + 0.15, 0.03, 0, g));
+    const lnk = px - 0.6 - w / 2;
+    noSh(box(lnk, 0.06, 1.8, mat.slab, w / 2 + lnk / 2, 0.03, 0, g));   // ligação da porta até o caminho, que fica no meio do terreno
     let pi = 0;
     for (let z = -FRONT - GYM.z + 0.65; z < 13.2; z += 1.3, pi++) {
       noSh(box(1.2, 0.06, 1, mat.slab, px, 0.03, z, g));
