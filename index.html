@@ -934,6 +934,11 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
       let k = 0;
       for (let z = -FRONT + 1; z < rightEnd; z += 2) monstera(W / 2 - T - 0.5, z, k++, dyn);
       for (let z = -FRONT + 1; z < leftEnd; z += 2) monstera(-W / 2 + T + 0.5, z, k++, dyn);
+      // costelas-de-adão nas duas laterais da academia (as pontas de vidro), sem tapar o canto da porta
+      for (let x = GYM.x - GYM.w / 2 + 0.6; x < GYM.x + GYM.w / 2 - 0.9; x += 1.2) {
+        monstera(x, GYM.z - GYM.d / 2 - 0.8, k++, dyn);
+        monstera(x, GYM.z + GYM.d / 2 + 0.8, k++, dyn);
+      }
       // arandelas a meia altura do muro, uma a cada 2,5 m, nos mesmos trechos das plantas
       const sconce = (sd, z) => {
         const ax = sd * (W / 2 - T - 0.05), ay = wh / 2;
