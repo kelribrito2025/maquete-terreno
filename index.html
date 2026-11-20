@@ -88,6 +88,8 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
 .panel-head > div { min-width: 0; }
 .panel-head button { flex: none; padding: 6px 10px; font-size: 13px; }
 .panel-body { display: flex; flex-direction: column; gap: 14px; }
+.facades { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.facades button { padding: 8px 4px; font-size: 13px; }
 .wide { width: 100%; margin-top: 6px; }
 #pad {
   position: fixed;
@@ -155,6 +157,13 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     <button id="toggle-dims" type="button" aria-pressed="false">Cotas</button>
   </div>
   <button id="toggle-div" class="wide" type="button" aria-pressed="false" style="margin-top:-8px">Remover muro do fundo</button>
+  <div>
+    <p class="group-label">Fachada</p>
+    <div class="facades">
+      <button id="fac-a" type="button" aria-pressed="true">Opção 1: nicho</button>
+      <button id="fac-b" type="button" aria-pressed="false">Opção 2: lâminas</button>
+    </div>
+  </div>
 
   <div class="sliders sun">
     <div class="slider">
@@ -222,7 +231,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   const W = 12, D = 40, T = 0.15;           // frente, fundo, espessura do muro (m)
   const FRONT = D / 2;                      // z da testada (rua fica em +z)
   const CAR_L = 4.4, CAR_W = 1.8;           // carro médio
-  const state = { rc: 5.5, gl: 7, gw: 4, gh: 2.6, wh: 3.2, gx: 0, open: false, dims: false, car: true, divider: true };
+  const state = { rc: 5.5, gl: 7, gw: 4, gh: 2.6, wh: 3.2, gx: 0, open: false, dims: false, car: true, divider: true, facade: 'A' };
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fmt = (n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -285,6 +294,11 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     camWhite: std(0xf5f6f6, 0.5),
     inoxHandle: std(0xd5d9dc, 0.25, 0.8),
     gateBlack: std(0x17191b, 0.45, 0.45),
+    blade: std(0x5f5d5b, 0.85),
+    shrubGreen: std(0x4c8a3a, 0.9),
+    darkStone: std(0x3b3e41, 0.55),
+    gateWood: std(0x9b5634, 0.55, 0.1),
+    copper: std(0xc08a55, 0.35, 0.6),
     fencePost: std(0x8d9499, 0.5, 0.5),
     fenceWire: new THREE.LineBasicMaterial({ color: 0x3d4449 }),
     grid: new THREE.LineBasicMaterial({ color: 0x6b9648 })
@@ -817,6 +831,27 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     return t;
   })();
   const paverMat = new THREE.MeshStandardMaterial({ map: paverTex, roughness: 0.95 });
+  // Pedra clara em réguas horizontais (estilo travertino), para a fachada 2
+  const stoneTex = (function () {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+    const x = c.getContext('2d');
+    x.fillStyle = '#cfcac2'; x.fillRect(0, 0, 256, 128);
+    const tones = ['#d8d3cb', '#c7c1b8', '#d1ccc4', '#bfb9b0', '#dcd8d1'];
+    for (let r = 0; r < 8; r++) {
+      let px = -(r % 3) * 40;
+      while (px < 256) {
+        const w = 70 + ((r * 37 + px) % 60);
+        x.fillStyle = tones[(r + Math.abs(px)) % tones.length]; x.fillRect(px + 1, r * 16 + 1, w - 2, 14);
+        for (let k = 0; k < 6; k++) { x.fillStyle = 'rgba(150,140,128,0.25)'; x.fillRect(px + 4 + k * 11, r * 16 + 4 + (k % 3) * 3, 9, 1); }
+        px += w;
+      }
+    }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+  })();
+  function stoneMat(w, h) {
+    const t = stoneTex.clone(); t.needsUpdate = true; t.repeat.set(w / 2.4, h / 1.2);
+    return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });
+  }
   const soilMat = std(0x4a3a2c, 1);
 
   // Materiais da área gourmet
@@ -906,12 +941,15 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     box(wr, yU, T, mat.wall, W / 2 - wr / 2, yU / 2, zf, dyn);
     box(gw, yU - gh, T, mat.wall, gx, gh + (yU - gh) / 2, zf, dyn);
 
+    const FB = state.facade === 'B';        // fachada 2: lâminas, pedra clara e pórtico grafite
     // Moldura escura: laje em balanço, pilares das pontas; platibanda clara por cima
-    box(W, FT, MD + T, mat.frame, 0, yU + FT / 2, zf + MD / 2, dyn);
-    box(FT, yU, MD, mat.band, -W / 2 + FT / 2, yU / 2, zOut + MD / 2, dyn);
-    box(FT, yU, MD, mat.band, W / 2 - FT / 2, yU / 2, zOut + MD / 2, dyn);
-    box(W - 0.12, bandH, MD + T - 0.12, mat.band, 0, yU + FT + bandH / 2, zf + MD / 2 - 0.03, dyn);
-    box(W, 0.06, MD + T, mat.frame, 0, yU + FT + bandH + 0.03, zf + MD / 2, dyn);
+    if (!FB) {
+      box(W, FT, MD + T, mat.frame, 0, yU + FT / 2, zf + MD / 2, dyn);
+      box(FT, yU, MD, mat.band, -W / 2 + FT / 2, yU / 2, zOut + MD / 2, dyn);
+      box(FT, yU, MD, mat.band, W / 2 - FT / 2, yU / 2, zOut + MD / 2, dyn);
+      box(W - 0.12, bandH, MD + T - 0.12, mat.band, 0, yU + FT + bandH / 2, zf + MD / 2 - 0.03, dyn);
+      box(W, 0.06, MD + T, mat.frame, 0, yU + FT + bandH + 0.03, zf + MD / 2, dyn);
+    }
 
     // Divide a fachada: nicho decorado no lado mais largo, madeira no lado do portão
     const xa = -W / 2 + FT, xb = W / 2 - FT;
@@ -924,22 +962,22 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     const woodW = woodZ[1] - woodZ[0], wc = (woodZ[0] + woodZ[1]) / 2;
 
     // Revestimento de madeira em réguas verticais, forro de madeira e piso sob a marquise
-    const wn = Math.max(1, Math.round(woodW / 0.2)), pw = woodW / wn;
+    const wn = FB ? 0 : Math.max(1, Math.round(woodW / 0.2)), pw = woodW / Math.max(1, wn);
     for (let i = 0; i < wn; i++) {
       const xc = woodZ[0] + pw * (i + 0.5);
       const tone = mat.clad;
       if (xc > left && xc < right) box(pw - 0.012, yU - gh, 0.04, tone, xc, gh + (yU - gh) / 2, zOut + 0.02, dyn);
       else box(pw - 0.012, yU, 0.04, tone, xc, yU / 2, zOut + 0.02, dyn);
     }
-    box(woodW, 0.04, MD - 0.05, mat.clad, wc, yU - 0.02, zOut + MD / 2, dyn);
+    box(woodW, 0.04, MD - 0.05, FB ? mat.frame : mat.clad, wc, yU - 0.02, zOut + MD / 2, dyn);
     box(woodW, 0.09, MD, mat.slab, wc, 0.05, zOut + MD / 2, dyn).castShadow = false;
-    if (hasNiche) box(0.08, yU, MD - 0.1, mat.clad, split, yU / 2, zOut + (MD - 0.1) / 2, dyn);
+    if (hasNiche && !FB) box(0.08, yU, MD - 0.1, mat.clad, split, yU / 2, zOut + (MD - 0.1) / 2, dyn);
     box(0.03, gh, 0.06, mat.frame, left + 0.015, gh / 2, zOut + 0.02, dyn);
     box(0.03, gh, 0.06, mat.frame, right - 0.015, gh / 2, zOut + 0.02, dyn);
     box(gw, 0.03, 0.06, mat.frame, gx, gh - 0.015, zOut + 0.02, dyn);
 
     // Balizadores de luz no pé da parede de madeira
-    [[woodZ[0], left], [right, woodZ[1]]].forEach(([a, b]) => {
+    if (!FB) [[woodZ[0], left], [right, woodZ[1]]].forEach(([a, b]) => {
       const k = Math.min(4, Math.floor((b - a - 0.3) / 0.6));
       for (let i = 0; i < k; i++) {
         const lx = a + (b - a) * (i + 1) / (k + 1);
@@ -950,7 +988,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     const glowW = new THREE.PointLight(0xffb060, 0.55, 7);
     glowW.position.set(wc, yU - 0.5, zOut + 0.9); dyn.add(glowW);
 
-    if (hasNiche) {
+    if (hasNiche && !FB) {
       const nw = niche[1] - niche[0], nc = (niche[0] + niche[1]) / 2;
       const by = 0.55;                      // banco flutuante
       box(nw, 0.16, 1.05, mat.frame, nc, by, zOut + 0.525, dyn);
@@ -994,20 +1032,61 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
       box(nw - 0.3, 0.1, 0.5, soilMat, nc, 0.05, zOut + 1.2, dyn).castShadow = false;   // canteiro sob o banco
     }
 
+    if (FB) {
+      const HB = 3.7, xL = -W / 2 + T, sw = (hasNiche ? split : left) - xL;
+      // volume da esquerda revestido em pedra clara
+      box(sw, HB, 0.4, stoneMat(sw, HB), xL + sw / 2, HB / 2, zOut + 0.05, dyn);
+      // volume alto, recuado, também em pedra, por cima da garagem
+      const ux0 = xL + sw - 1.4, ux1 = W / 2 - T - 0.3, uy0 = yU + FT, uh = 4.9 - uy0, uw = ux1 - ux0;
+      box(uw, uh, 4.5, stoneMat(uw, uh), (ux0 + ux1) / 2, uy0 + uh / 2, zf - 1.2 - 2.25, dyn);
+      box(uw + 0.04, 0.05, 4.54, mat.blade, (ux0 + ux1) / 2, 4.925, zf - 3.45, dyn);
+      // três lâminas verticais grafite na ponta esquerda, mais altas que a casa
+      for (let i = 0; i < 3; i++) box(0.42, 5.2, 0.55, mat.blade, xL + 0.3 + i * 0.72, 2.6, zOut + 0.5, dyn);
+      // pórtico grafite da garagem, em balanço, com o número da casa
+      const fx0 = xL + sw - 1.9, fx1 = W / 2 - T, BH = 0.62;
+      box(fx1 - fx0, BH, MD + 0.3, mat.blade, (fx0 + fx1) / 2, yU + BH / 2, zOut + (MD + 0.3) / 2 - 0.3, dyn);
+      box(0.3, yU, MD, mat.blade, fx1 - 0.15, yU / 2, zOut + MD / 2, dyn);
+      box(fx1 - fx0 - 0.4, 0.025, 0.03, mat.lamp, (fx0 + fx1) / 2 + 0.05, yU - 0.015, zOut + MD - 0.2, dyn).castShadow = false;   // fita de LED
+      box(0.03, yU - 0.3, 0.025, mat.lamp, fx1 - 0.31, (yU - 0.3) / 2 + 0.3, zOut + MD - 0.2, dyn).castShadow = false;
+      const nc2 = document.createElement('canvas'); nc2.width = 256; nc2.height = 128;
+      const nx = nc2.getContext('2d'); nx.fillStyle = '#f2f0ec'; nx.font = '500 96px Inter, system-ui, sans-serif'; nx.textBaseline = 'middle'; nx.fillText('126', 8, 68);
+      const numM = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(nc2), transparent: true });
+      const num = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.42), numM);
+      num.position.set(fx0 + 0.55, yU + BH / 2, zOut + MD + 0.01); dyn.add(num);
+      // jardim com arbustos e escada de pedra escura na frente do volume de pedra
+      const gx0 = xL + 0.05, gx1 = xL + sw - 0.4;
+      box(gx1 - gx0, 0.08, 2.2, mat.grass, (gx0 + gx1) / 2, 0.045, zOut + 0.25 + 1.1, dyn).castShadow = false;
+      const sx = xL + sw - 1.25;
+      for (let i = 0; i < 4; i++) {
+        const hh = 0.6 - i * 0.15;
+        box(1.5, hh, 0.45, mat.darkStone, sx, hh / 2, zOut + 0.25 + 0.45 * (i + 0.5), dyn);
+      }
+      [[xL + 0.55, 1.9, 0.32], [xL + 1.5, 1.1, 0.27], [xL + 2.1, 2.2, 0.3], [sx + 1.0, 1.6, 0.25]].forEach(([bx, bz, r]) => {
+        const b = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), mat.shrubGreen);
+        b.position.set(bx, 0.08 + r * 0.8, zOut + 0.25 + bz); b.castShadow = true; dyn.add(b);
+      });
+    }
+
     // Portão de madeira em réguas verticais, no mesmo plano do revestimento
     gatePivot = new THREE.Group();
     // Portão de correr: fica atrás da parede e desliza da direita para a esquerda
     gatePivot.position.set(gx, gh, zf - T - 0.02);
     gatePivot.userData = { x0: gx, travel: Math.min(gw, left - (-W / 2 + T) - 0.05) };
     // Portão convencional preto: quadro de metal com lambris horizontais
-    box(gw - 0.02, gh - 0.02, 0.04, mat.gateBlack, 0, -gh / 2, 0, gatePivot);
+    const gMat = FB ? mat.gateWood : mat.gateBlack;
+    box(gw - 0.02, gh - 0.02, 0.04, gMat, 0, -gh / 2, 0, gatePivot);
     const gn = Math.max(6, Math.round(gh / 0.16)), gph = (gh - 0.12) / gn;
     for (let i = 0; i < gn; i++) {
-      box(gw - 0.16, gph - 0.02, 0.05, mat.gateBlack, 0, -0.06 - gph * (i + 0.5), T / 2, gatePivot);
+      if (!FB) box(gw - 0.16, gph - 0.02, 0.05, mat.gateBlack, 0, -0.06 - gph * (i + 0.5), T / 2, gatePivot);
     }
-    box(0.07, gh - 0.02, 0.07, mat.gateBlack, -gw / 2 + 0.045, -gh / 2, T / 2, gatePivot);
-    box(0.07, gh - 0.02, 0.07, mat.gateBlack, gw / 2 - 0.045, -gh / 2, T / 2, gatePivot);
-    box(0.07, gh - 0.02, 0.07, mat.gateBlack, 0, -gh / 2, T / 2, gatePivot);
+    if (FB) {                               // painéis de madeira com frisos acobreados
+      box(gw - 0.04, gh - 0.04, 0.05, mat.gateWood, 0, -gh / 2, T / 2, gatePivot);
+      for (let i = 1; i < 4; i++) box(0.03, gh - 0.04, 0.06, mat.copper, -gw / 2 + gw * i / 4, -gh / 2, T / 2, gatePivot);
+    } else {
+      box(0.07, gh - 0.02, 0.07, mat.gateBlack, -gw / 2 + 0.045, -gh / 2, T / 2, gatePivot);
+      box(0.07, gh - 0.02, 0.07, mat.gateBlack, gw / 2 - 0.045, -gh / 2, T / 2, gatePivot);
+      box(0.07, gh - 0.02, 0.07, mat.gateBlack, 0, -gh / 2, T / 2, gatePivot);
+    }
     dyn.add(gatePivot);
     gatePivot.position.x = gx - gatePivot.userData.travel * gateT;
 
@@ -1052,7 +1131,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
 
     // Duas câmeras de segurança na platibanda da fachada, uma em cada ponta, apontando para o recuo
     [-1, 1].forEach((sd) => {
-      const cxm = sd * (W / 2 - 1), cym = yU + FT + bandH * 0.45, czm = zOut + MD - 0.05;
+      const cxm = sd * (W / 2 - 1), cym = FB ? (sd < 0 ? 3.2 : yU - 0.25) : yU + FT + bandH * 0.45, czm = FB ? (sd < 0 ? zOut + 0.2 : zOut + MD - 0.05) : zOut + MD - 0.05;
       box(0.1, 0.1, 0.06, mat.camWhite, cxm, cym, czm + 0.03, dyn);
       box(0.03, 0.03, 0.14, mat.camWhite, cxm, cym, czm + 0.1, dyn);
       const cam = new THREE.Group(); cam.position.set(cxm, cym - 0.03, czm + 0.2);
@@ -1224,7 +1303,8 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     fence(-W / 2 + T / 2, -FRONT, -W / 2 + T / 2, zl, wh);
     fence(W / 2 - T / 2, -FRONT, W / 2 - T / 2, zr, wh);
     if (state.divider) fence(-W / 2 + T / 2, -FRONT + T / 2, W / 2 - T / 2, -FRONT + T / 2, wh);
-    fence(-W / 2 + 0.1, zf, W / 2 - 0.1, zf, yU + FT + bandH + 0.06);
+    if (FB) fence(-W / 2 + 0.1, zOut + 0.05, (hasNiche ? split : left) - 0.1, zOut + 0.05, 3.72);
+    else fence(-W / 2 + 0.1, zf, W / 2 - 0.1, zf, yU + FT + bandH + 0.06);
     // casa atual (terreno de trás): cerca nos dois muros laterais e no muro da frente dela
     // os muros da casa atual têm a mesma altura do muro deste terreno
     box(T, wh, D, mat.wall, -W / 2 + T / 2, wh / 2, BZ, dyn);
@@ -1448,6 +1528,14 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     state.car = !state.car;
     carBtn.setAttribute('aria-pressed', String(state.car));
     if (carGroup) carGroup.visible = state.car;
+  });
+  ['A', 'B'].forEach((k) => {
+    document.getElementById('fac-' + k.toLowerCase()).addEventListener('click', () => {
+      state.facade = k;
+      document.getElementById('fac-a').setAttribute('aria-pressed', String(k === 'A'));
+      document.getElementById('fac-b').setAttribute('aria-pressed', String(k === 'B'));
+      build();
+    });
   });
   const divBtn = document.getElementById('toggle-div');
   divBtn.addEventListener('click', () => {
