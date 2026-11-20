@@ -152,7 +152,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   <div class="toggles">
     <button id="toggle-gate" type="button" aria-pressed="false">Abrir</button>
     <button id="toggle-car" type="button" aria-pressed="true">Carro</button>
-    <button id="toggle-dims" type="button" aria-pressed="true">Cotas</button>
+    <button id="toggle-dims" type="button" aria-pressed="false">Cotas</button>
   </div>
   <button id="toggle-div" class="wide" type="button" aria-pressed="false" style="margin-top:-8px">Remover muro do fundo</button>
 
@@ -222,7 +222,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   const W = 12, D = 40, T = 0.15;           // frente, fundo, espessura do muro (m)
   const FRONT = D / 2;                      // z da testada (rua fica em +z)
   const CAR_L = 4.4, CAR_W = 1.8;           // carro médio
-  const state = { rc: 5.5, gl: 7, gw: 4, gh: 2.6, wh: 3.2, gx: 0, open: false, dims: true, car: true, divider: true };
+  const state = { rc: 5.5, gl: 7, gw: 4, gh: 2.6, wh: 3.2, gx: 0, open: false, dims: false, car: true, divider: true };
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fmt = (n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
