@@ -357,6 +357,38 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   box(POOL.w + 1.2, 0.08, POOL.d + 1.2, mat.slab, POOL.x, 0.03, POOL.z).castShadow = false;
   box(POOL.w, 0.06, POOL.d, std(0x3fa9d6, 0.1, 0.2), POOL.x, 0.06, POOL.z).castShadow = false;
 
+  // Casa atual: pergolado com espreguiçadeiras (sem lareira), entre a piscina e o muro de divisa
+  const PERG = { x: W / 2 - T - 0.3 - 2, z: -FRONT - 9, s: 4 };
+  (function () {
+    const g = new THREE.Group(); g.position.set(PERG.x, 0, PERG.z); scene.add(g);
+    const wood = std(0x9b6a3c, 0.75), dark = std(0x2a2d30, 0.7), cush = std(0xe9e6df, 0.9);
+    const s = PERG.s;
+    box(s, 0.08, s, mat.slab, 0, 0.03, 0, g).castShadow = false;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => box(0.14, 2.6, 0.14, dark, a * (s / 2 - 0.1), 1.3, b * (s / 2 - 0.1), g));
+    [-1, 1].forEach((a) => box(0.12, 0.2, s + 0.5, dark, a * (s / 2 - 0.1), 2.7, 0, g));
+    for (let z = -s / 2 - 0.15; z <= s / 2 + 0.16; z += 0.4) box(s + 0.5, 0.14, 0.06, wood, 0, 2.87, z, g);
+    [-0.85, 0.85].forEach((x) => {          // duas espreguiçadeiras viradas para a piscina
+      box(0.65, 0.22, 1.9, wood, x, 0.2, 0, g);
+      box(0.6, 0.08, 1.2, cush, x, 0.35, -0.3, g);
+      const back = box(0.6, 0.08, 0.75, cush, x, 0.55, 0.62, g); back.rotation.x = -0.7;
+    });
+    box(0.4, 0.4, 0.4, dark, 0, 0.27, -0.2, g);
+  })();
+  // Palmeiras junto ao muro de divisa, do lado da casa atual
+  const palmTrunk = std(0x8a6a4a, 0.9), palmLeaf = std(0x3f8a3f, 0.8);
+  [-5, -2.5, 0, 2.5, 5].forEach((px, n) => {
+    const g = new THREE.Group(); g.position.set(px, 0, -FRONT - 1); scene.add(g);
+    const hT = 3.2 + (n % 2) * 0.5;
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.17, hT, 10), palmTrunk);
+    t.position.y = hT / 2; t.castShadow = true; g.add(t);
+    for (let i = 0; i < 10; i++) {
+      const f = new THREE.Mesh(leafGeo, palmLeaf);
+      f.position.set(0, hT - 0.05, 0); f.scale.set(4.5, 2.3 + (i % 2) * 0.4, 1.2);
+      f.rotation.order = 'YXZ'; f.rotation.y = i * Math.PI * 2 / 10 + n; f.rotation.x = 1.05 + (i % 3) * 0.18;
+      f.castShadow = true; g.add(f);
+    }
+  });
+
   // Mini academia no meio do quintal, encostada no muro esquerdo: 4,5 m de largura (saindo do muro) por 9 m de comprimento (ao longo do muro).
   // O muro é a parede do fundo; as outras três faces são de vidro.
   const GYM = { w: 4.5, d: 9, h: 2.7, x: -W / 2 + T + 2.25, z: -7 };
@@ -1054,6 +1086,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
 
     const l9 = label('Academia 4,5 × 9 m'); l9.position.set(GYM.x, GYM.h + 1.3, GYM.z); dims.add(l9);
     const l7 = label('Casa atual'); l7.position.set(0, HOUSE.h + 1.2, HOUSE.z); dims.add(l7);
+    const l13 = label('Pergolado'); l13.position.set(PERG.x, 3.7, PERG.z); dims.add(l13);
     const l11 = label('Piscina'); l11.position.set(POOL.x, 1, POOL.z); dims.add(l11);
     const l8 = label('Terreno de trás 12 × 40 m'); l8.position.set(0, 0.8, -FRONT - 8); dims.add(l8);
 
