@@ -1015,7 +1015,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     const l11 = label('Piscina'); l11.position.set(POOL.x, 1, POOL.z); dims.add(l11);
     const l8 = label('Terreno de trás 12 × 40 m'); l8.position.set(0, 0.8, -FRONT - 8); dims.add(l8);
 
-    dims.visible = state.dims;
+    dims.visible = state.dims && !free.walk;
 
     document.getElementById('rc-out').textContent = fmt(rc) + ' m';
     document.getElementById('rc-stat').textContent = fmt(rc) + ' m';
@@ -1070,12 +1070,14 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   box(0.11, 0.2, 0.13, shirt, -0.28, 1.4, 0, walker); box(0.11, 0.2, 0.13, shirt, 0.28, 1.4, 0, walker);
   const headM = new THREE.Mesh(new THREE.SphereGeometry(0.13, 18, 14), skin); headM.position.y = 1.67; headM.castShadow = true; walker.add(headM);
   const hairM = new THREE.Mesh(new THREE.SphereGeometry(0.135, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), pants); hairM.position.y = 1.69; walker.add(hairM);
+  const camRay = new THREE.Raycaster(), camHead = new THREE.Vector3(), camWant = new THREE.Vector3(), camDir = new THREE.Vector3();
   const walkBtn = document.getElementById('toggle-walk');
   const FREE_HINT = 'W A S D ou setas para andar. Arraste para olhar. Q desce, E sobe. Shift corre.';
   function setMode(m) {
     const wasWalk = free.walk;
     free.walk = m === 'walk'; walker.visible = free.walk;
     walkBtn.setAttribute('aria-pressed', String(free.walk));
+    dims.visible = state.dims && !free.walk;  // no passeio, as etiquetas de cota ficam escondidas
     if (m === 'orbit') { setFree(false); return; }
     if (!free.on) setFree(true);
     freeBtn.setAttribute('aria-pressed', String(m === 'free'));
@@ -1279,8 +1281,26 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
       const sw = mv ? Math.sin(wk.phase) * 0.6 : 0;
       legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -sw * 0.8; armR.rotation.x = sw * 0.8;
       const dist = 5.2, cp = Math.cos(free.pitch);
-      camera.position.set(wk.x - fx * dist * cp, Math.max(0.5, 2.0 - Math.sin(free.pitch) * dist), wk.z - fz * dist * cp);
-      camera.lookAt(wk.x + fx * 2, 1.3, wk.z + fz * 2);
+      // a câmera não pode ficar atrás de parede: se houver algo entre a cabeça e a câmera, ela chega mais perto
+      camHead.set(wk.x, 1.62, wk.z);
+      camWant.set(wk.x - fx * dist * cp, Math.max(0.5, 2.0 - Math.sin(free.pitch) * dist), wk.z - fz * dist * cp);
+      camDir.copy(camWant).sub(camHead);
+      const want = camDir.length(); camDir.normalize();
+      camRay.set(camHead, camDir); camRay.far = want; camRay.camera = camera;
+      let free_d = want;
+      const hits = camRay.intersectObjects(scene.children, true);
+      for (let i = 0; i < hits.length; i++) {
+        const o = hits[i].object;
+        if (!o.isMesh || !o.visible || (o.material && o.material.transparent)) continue;
+        let par = o, mine = false;
+        while (par) { if (par === walker) { mine = true; break; } par = par.parent; }
+        if (mine) continue;
+        free_d = Math.max(0, hits[i].distance - 0.35); break;
+      }
+      const close = free_d < 2.2;            // sem espaço atrás: vira visão dos olhos e esconde o boneco
+      walker.visible = !close;
+      if (close) camera.position.copy(camHead); else camera.position.copy(camHead).addScaledVector(camDir, free_d);
+      camera.lookAt(wk.x + fx * 3, close ? 1.5 : 1.3, wk.z + fz * 3);
     } else if (free.on) {
       const k = free.keys, sp = (k.run ? 14 : 6) * dt;
       const cp = Math.cos(free.pitch);
