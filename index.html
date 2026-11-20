@@ -84,6 +84,10 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
 .toggles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 .toggles button { padding: 8px 4px; }
 .hint { color: var(--muted); font-size: 12px; margin: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.panel-head > div { min-width: 0; }
+.panel-head button { flex: none; padding: 6px 10px; font-size: 13px; }
+.panel-body { display: flex; flex-direction: column; gap: 14px; }
 .wide { width: 100%; margin-top: 6px; }
 #pad {
   position: fixed;
@@ -103,6 +107,10 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   .stats dd { font-size: 14px; }
   .views { grid-template-columns: repeat(3, 1fr); }
   .hint { display: none; }
+  .panel-body { gap: 10px; }
+  .panel.min { padding: 10px 12px; }
+  .panel.min .sub { display: none; }
+  .panel.min h1 { font-size: 16px; }
   #pad { bottom: auto; top: calc(12px + env(safe-area-inset-top, 0px)); }
 }
 </style>
@@ -110,11 +118,15 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
 <div id="stage" aria-label="Maquete 3D do terreno"></div>
 
 <section class="panel">
-  <div>
-    <h1>Terreno 12 × 40</h1>
-    <p class="sub">Fachada recuada com portão de garagem</p>
+  <div class="panel-head">
+    <div>
+      <h1>Terreno 12 × 40</h1>
+      <p class="sub">Fachada recuada com portão de garagem</p>
+    </div>
+    <button id="toggle-panel" type="button" aria-expanded="true" aria-controls="panel-body">Ocultar</button>
   </div>
 
+  <div class="panel-body" id="panel-body">
   <dl class="stats">
     <div><dt>Frente</dt><dd>12 m</dd></div>
     <div><dt>Fundo</dt><dd>40 m</dd></div>
@@ -189,6 +201,7 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
   </details>
 
   <p class="hint" id="hint">Arraste para girar. Role para aproximar. Botão direito para mover.</p>
+  </div>
 </section>
 
 <div id="pad" hidden>
@@ -1186,7 +1199,16 @@ select { width: 100%; margin-top: 4px; font: inherit; color: var(--fg); backgrou
     dimsBtn.setAttribute('aria-pressed', String(state.dims));
     dims.visible = state.dims;
   });
-  if (window.innerWidth <= 640) document.getElementById('ajustes').removeAttribute('open');
+  // Painel recolhível: no celular ele começa fechado, para a maquete aparecer
+  const panelEl = document.querySelector('.panel'), panelBody = document.getElementById('panel-body'), panelBtn = document.getElementById('toggle-panel');
+  function setPanel(open) {
+    panelBody.hidden = !open;
+    panelEl.classList.toggle('min', !open);
+    panelBtn.textContent = open ? 'Ocultar' : 'Mostrar';
+    panelBtn.setAttribute('aria-expanded', String(open));
+  }
+  panelBtn.addEventListener('click', () => setPanel(panelBody.hidden));
+  if (window.innerWidth <= 640) { document.getElementById('ajustes').removeAttribute('open'); setPanel(false); }
 
   // Sol e luz: posição do sol pelo horário (hemisfério sul, sol passa pelo norte) e iluminação noturna
   const daySky = new THREE.Color('#e6ebee'), nightSky = new THREE.Color(0x0a111c), duskSky = new THREE.Color(0xf0a878);
